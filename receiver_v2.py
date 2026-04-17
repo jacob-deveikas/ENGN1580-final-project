@@ -5,7 +5,7 @@ import sounddevice as sd
 fs = 44100
 bit_duration = 0.02
 f_carrier = 2000
-amplitude = 0.5
+amplitude = 1
 
 PREAMBLE = "1010101010101010"
 
