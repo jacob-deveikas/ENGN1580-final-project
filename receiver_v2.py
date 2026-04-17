@@ -3,7 +3,7 @@ import sounddevice as sd
 
 # Must match transmitter
 fs = 44100
-bit_duration = 0.1
+bit_duration = 0.02
 f_carrier = 2000
 amplitude = 0.5
 
