@@ -3,7 +3,7 @@ import sounddevice as sd
 
 # Must match transmitter
 fs = 44100
-bit_duration = 0.1
+bit_duration = 0.02
 f_carrier = 2000
 amplitude = 0.5
 
@@ -17,6 +17,16 @@ def generate_template(bit):
 def build_preamble_signal():
     return np.concatenate([generate_template(b) for b in PREAMBLE])
 
+def matched_filter(rx):
+    N = int(fs * bit_duration)
+    t = np.linspace(0, bit_duration, N, endpoint=False)
+    ref_sin = np.sin(2 * np.pi * f_carrier * t)
+    ref_cos = np.cos(2 * np.pi * f_carrier * t)
+    I = np.convolve(rx, ref_sin[::-1], mode='valid')
+    Q = np.convolve(rx, ref_cos[::-1], mode='valid')
+    mf_mag = np.sqrt(I**2 + Q**2)
+    return mf_mag
+
 def record_signal(duration):
     print("Recording...")
     x = sd.rec(int(duration * fs), samplerate=fs, channels=1)
@@ -28,22 +38,21 @@ def find_preamble_start(rx, preamble_signal):
     start_idx = np.argmax(corr)
     return start_idx
 
-def decode_bits(rx, start_idx):
+def decode_bits(mf_mag, start_idx):
     N = int(fs * bit_duration)
-    bits = []
+    bit_values = []
 
     i = start_idx
-    while i + N <= len(rx):
-        chunk = rx[i:i+N]
-
-        # Energy detection
-        energy = np.sum(chunk**2)
-
-        # Simple threshold (can be improved)
-        bits.append('1' if energy > 0.01 else '0')
-
+    while i + N <= len(mf_mag):
+        window = mf_mag[i:i + N]
+        bit_values.append(np.max(window))
         i += N
 
+    bit_values = np.array(bit_values)
+    high = np.percentile(bit_values, 90)
+    low = np.percentile(bit_values, 10)
+    threshold = 0.5 * (high + low)
+    bits = ['1' if v > threshold else '0' for v in bit_values]
     return ''.join(bits)
 
 def bits_to_text(bits):
@@ -64,7 +73,10 @@ if __name__ == "__main__":
 
     print("Preamble detected at index:", start)
 
-    bits = decode_bits(rx, start + len(preamble_signal))
+    mf_mag = matched_filter(rx)
+    N = int(fs * bit_duration)
+    payload_start = start + len(PREAMBLE) * N
+    bits = decode_bits(mf_mag, payload_start)
 
     text = bits_to_text(bits)
     print("Decoded text:", text)
