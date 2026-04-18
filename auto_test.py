@@ -2,8 +2,8 @@ import subprocess
 import sys
 import time
 
-RECEIVER = "receiver_v2.py"
-TRANSMITTER = "transmitter_v2.py"
+RECEIVER = "receiver_improved.py"
+TRANSMITTER = "transmitter_improved.py"
 WARMUP_SECONDS = 1.5
 
 def main():
