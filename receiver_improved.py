@@ -38,7 +38,7 @@ from transmitter_improved import (
     crc16_ccitt,
 )
 
-RECORD_DURATION = 6.0
+RECORD_DURATION = 10.0
 DEBUG = True   # flip to False to silence per-stage diagnostics
 
 # ---------------------------------------------------------------------------
