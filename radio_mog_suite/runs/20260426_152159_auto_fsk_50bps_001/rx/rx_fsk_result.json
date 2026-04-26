@@ -1,0 +1,15 @@
+{
+  "actual_bit_rate": 50.0,
+  "bit_errors": 0,
+  "bit_rate_requested": 50.0,
+  "mode": "fsk",
+  "n_bits": 256,
+  "ok": true,
+  "pe": 0.0,
+  "preamble_score": 0.8218953013420105,
+  "profile": "low",
+  "profiles_spec": "low,high",
+  "reason": "ok",
+  "score": 1.0,
+  "start": 12008
+}

@@ -1,0 +1,17 @@
+{
+  "argv": [
+    "tx_graded.py",
+    "--mode",
+    "fsk",
+    "--rate",
+    "500",
+    "--n-bits",
+    "512",
+    "--profiles",
+    "high",
+    "--preview"
+  ],
+  "cwd": "/Users/coralrothenberg/Downloads/radio_mog_suite",
+  "python": "/Library/Frameworks/Python.framework/Versions/3.10/bin/python3",
+  "timestamp": "2026-04-25T21:15:59"
+}

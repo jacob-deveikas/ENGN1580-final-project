@@ -1,0 +1,218 @@
+COMMANDS FOR EVERY CASE
+
+Assume you have extracted the zip and run:
+
+cd radio_mog_suite
+python install_check.py
+
+If sounddevice is missing:
+pip install -r requirements.txt
+
+0. LIST AUDIO DEVICES
+
+python tx_graded.py --mode fsk --list-devices
+python rx_graded.py --mode fsk --list-devices
+python measure_channel.py --mode rx --list-devices
+python live_monitor.py --list-devices
+python interference_generator.py --kind sine --list-devices
+
+Use --device N on any script if you need a specific device.
+
+1. REAL-TIME WAVEFORM AND SPECTRUM INSTRUMENTATION
+
+Receiver laptop, microphone live display:
+python live_monitor.py
+
+This shows real-time receiver waveform and real-time power spectrum on 20 Hz to 20 kHz.
+
+2. AUDIO CHANNEL FREQUENCY RESPONSE, TWO LAPTOPS
+
+Receiver laptop:
+python measure_channel.py --mode rx --duration 2.0
+
+Transmitter laptop immediately after receiver starts:
+python measure_channel.py --mode tx --duration 2.0
+
+Receiver output folder contains:
+  channel_capture.wav
+  channel_response.png
+  channel_response.csv
+  channel_response.json
+
+Use channel_response.png in the presentation. Use channel_response.json for adaptive carrier/profile selection.
+
+3. AMBIENT NOISE SCAN, RECEIVER LAPTOP
+
+python measure_channel.py --mode ambient --duration 2.0
+
+Output folder contains:
+  ambient_capture.wav
+  ambient_noise.png
+  ambient_choice.json
+
+Use ambient_noise.png in the presentation. Use ambient_choice.json for adaptive FSK profile choice.
+
+4. AUDIO INTERFERENCE GENERATOR
+
+Single-frequency sinusoid:
+python interference_generator.py --kind sine --freq 3000 --duration 10 --gain 0.20
+
+White noise across roughly 20 Hz to 20 kHz:
+python interference_generator.py --kind white --duration 10 --gain 0.12
+
+Bursty impulse-like interference:
+python interference_generator.py --kind burst --duration 10 --gain 0.25
+
+Save but do not play:
+python interference_generator.py --kind white --duration 10 --gain 0.12 --no-play
+
+5. ONE-MACHINE QUICK TESTS, THURSDAY GRADED UNCODED
+
+FSK 50 bps:
+python auto_test_graded.py --mode fsk --rate 50 --n-bits 256 --profiles low,high --verbose
+
+FSK 500 bps:
+python auto_test_graded.py --mode fsk --rate 500 --n-bits 512 --profiles low,high --verbose
+
+FSK 5000 bps, most likely wired or very close acoustic:
+python auto_test_graded.py --mode fsk --rate 5000 --n-bits 1024 --profiles wide --verbose
+
+QPSK 50 bps:
+python auto_test_graded.py --mode qpsk --rate 50 --n-bits 256 --channel-file runs/PATH_TO_CHANNEL/channel_response.json --verbose
+
+QPSK 500 bps:
+python auto_test_graded.py --mode qpsk --rate 500 --n-bits 512 --channel-file runs/PATH_TO_CHANNEL/channel_response.json --verbose
+
+QPSK 5000 bps, most likely wired or very close acoustic:
+python auto_test_graded.py --mode qpsk --rate 5000 --n-bits 1024 --channel-file runs/PATH_TO_CHANNEL/channel_response.json --verbose
+
+CDMA 64-chip temporal, 100 bps, 12.8 kHz carrier:
+python auto_test_graded.py --mode cdma --rate 100 --n-bits 256 --verbose
+
+If you do not have a channel file yet, omit --channel-file. QPSK will use the default 4800 Hz center.
+
+6. TWO-COMPUTER FSK, THURSDAY GRADED UNCODED
+
+Receiver laptop, 50 bps:
+python rx_graded.py --mode fsk --rate 50 --n-bits 256 --profiles low,high --timeout 14 --verbose
+
+Transmitter laptop:
+python tx_graded.py --mode fsk --rate 50 --n-bits 256 --profiles low,high --preview
+
+Receiver laptop, 500 bps:
+python rx_graded.py --mode fsk --rate 500 --n-bits 512 --profiles low,high --timeout 8 --verbose
+
+Transmitter laptop:
+python tx_graded.py --mode fsk --rate 500 --n-bits 512 --profiles low,high --preview
+
+Receiver laptop, 5000 bps, wired or very close:
+python rx_graded.py --mode fsk --rate 5000 --n-bits 1024 --profiles wide --timeout 5 --verbose
+
+Transmitter laptop:
+python tx_graded.py --mode fsk --rate 5000 --n-bits 1024 --profiles wide --preview
+
+Adaptive FSK using measured files:
+Receiver:
+python rx_graded.py --mode fsk --rate 500 --n-bits 512 --channel-file /ABS/PATH/channel_response.json --ambient-file /ABS/PATH/ambient_choice.json --timeout 8 --verbose
+
+Transmitter:
+python tx_graded.py --mode fsk --rate 500 --n-bits 512 --channel-file /ABS/PATH/channel_response.json --ambient-file /ABS/PATH/ambient_choice.json --preview
+
+If channel and ambient disagree, this automatically falls back to low,high diversity.
+
+7. TWO-COMPUTER QPSK / 4-QAM, THURSDAY GRADED UNCODED
+
+Receiver laptop, 50 bps:
+python rx_graded.py --mode qpsk --rate 50 --n-bits 256 --channel-file /ABS/PATH/channel_response.json --timeout 8 --constellation-out qpsk_constellation.png --verbose
+
+Transmitter laptop:
+python tx_graded.py --mode qpsk --rate 50 --n-bits 256 --channel-file /ABS/PATH/channel_response.json --preview
+
+Receiver laptop, 500 bps:
+python rx_graded.py --mode qpsk --rate 500 --n-bits 512 --channel-file /ABS/PATH/channel_response.json --timeout 8 --constellation-out qpsk_constellation.png --verbose
+
+Transmitter laptop:
+python tx_graded.py --mode qpsk --rate 500 --n-bits 512 --channel-file /ABS/PATH/channel_response.json --preview
+
+Receiver laptop, 5000 bps, wired or very close:
+python rx_graded.py --mode qpsk --rate 5000 --n-bits 1024 --channel-file /ABS/PATH/channel_response.json --timeout 6 --constellation-out qpsk_constellation.png --verbose
+
+Transmitter laptop:
+python tx_graded.py --mode qpsk --rate 5000 --n-bits 1024 --channel-file /ABS/PATH/channel_response.json --preview
+
+If you do not want a carrier file, replace --channel-file with explicit --carrier 4800 on both TX and RX.
+
+8. TWO-COMPUTER CDMA, THURSDAY GRADED UNCODED
+
+Receiver laptop:
+python rx_graded.py --mode cdma --rate 100 --n-bits 256 --timeout 12 --verbose
+
+Transmitter laptop:
+python tx_graded.py --mode cdma --rate 100 --n-bits 256 --preview
+
+This is 64-chip temporal spreading at 100 bps on a 12.8 kHz carrier.
+
+9. RUNNING AVERAGE P_e DISPLAY
+
+Receiver laptop:
+python pe_rx_loop.py --mode fsk --rate 500 --n-bits 512 --profiles low,high --count 10
+
+Transmitter laptop:
+python tx_loop_graded.py --mode fsk --rate 500 --n-bits 512 --profiles low,high --count 10 --gap 1.0
+
+QPSK running Pe:
+Receiver:
+python pe_rx_loop.py --mode qpsk --rate 500 --n-bits 512 --channel-file /ABS/PATH/channel_response.json --count 10
+
+Transmitter:
+python tx_loop_graded.py --mode qpsk --rate 500 --n-bits 512 --channel-file /ABS/PATH/channel_response.json --count 10 --gap 1.0
+
+10. OFFLINE DECODE FROM SAVED WAV
+
+FSK:
+python rx_graded.py --mode fsk --rate 500 --n-bits 512 --profiles low,high --wav-in /ABS/PATH/rx_fsk_capture.wav --verbose
+
+QPSK:
+python rx_graded.py --mode qpsk --rate 500 --n-bits 512 --channel-file /ABS/PATH/channel_response.json --wav-in /ABS/PATH/rx_qpsk_capture.wav --constellation-out offline_constellation.png --verbose
+
+CDMA:
+python rx_graded.py --mode cdma --rate 100 --n-bits 256 --wav-in /ABS/PATH/rx_cdma_capture.wav --verbose
+
+11. MONDAY FREE-FOR-ALL, NOT THURSDAY GRADED
+
+Battle FSK, one machine:
+python battle_auto_test_fsk.py --message "WAKE UP, NEO" --verbose
+
+Battle FSK, receiver laptop:
+python battle_receiver_fsk.py --timeout 25 --profiles low,high --verbose
+
+Battle FSK, transmitter laptop:
+python battle_transmitter_fsk.py --profiles low,high "WAKE UP, NEO"
+
+GRAND demo, no audio, Monday only:
+python grand_demo_monday_only.py --n 64 --k 56 --p 0.001 --trials 200 --max-weight 3
+
+12. RECOMMENDED THURSDAY FLOW
+
+A. Start live monitor on projected screen if possible:
+python live_monitor.py
+
+B. Measure channel:
+Receiver: python measure_channel.py --mode rx --duration 2.0
+Transmitter: python measure_channel.py --mode tx --duration 2.0
+
+C. Measure ambient:
+Receiver: python measure_channel.py --mode ambient --duration 2.0
+
+D. Show uncoded FSK at 50, 500, 5000 bps.
+Use 5000 wired if acoustic is too brutal.
+
+E. Show uncoded QPSK at 50, 500, 5000 bps and display qpsk_constellation.png.
+Use the measured channel_response.json carrier. Use wired for 5000 if needed.
+
+F. Show 64-chip CDMA at 100 bps.
+
+G. Turn on interference generator and show adaptive avoidance:
+Run a sine jammer at one band, measure ambient, switch FSK profile or use low,high diversity.
+
+H. Show running Pe loop.

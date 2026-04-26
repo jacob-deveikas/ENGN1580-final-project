@@ -1,0 +1,17 @@
+{
+  "argv": [
+    "auto_test_graded.py",
+    "--mode",
+    "fsk",
+    "--rate",
+    "50",
+    "--n-bits",
+    "256",
+    "--profiles",
+    "low,high",
+    "--verbose"
+  ],
+  "cwd": "/Users/coralrothenberg/Desktop/1580 Project/radio_mog_suite",
+  "python": "/opt/anaconda3/bin/python",
+  "timestamp": "2026-04-26T15:21:59"
+}

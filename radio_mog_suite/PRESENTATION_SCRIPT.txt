@@ -1,0 +1,25 @@
+SHORT PRESENTATION SCRIPT
+
+1. Channel first
+We measured the speaker-mic path directly with a swept audio waveform. The response is not flat, so the modulation choice absolutely depends on the channel. The plot shows where the room/laptop pair is strong, weak, and notched.
+
+2. Modulations
+For the graded uncoded system we prepared FSK, QPSK/4-QAM, and 64-chip temporal CDMA.
+FSK uses noncoherent tone-energy comparison.
+QPSK maps two bits per symbol to four constellation points, pulse shapes with an RRC filter, matched-filters at the receiver, and estimates timing and phase from a known sync sequence.
+CDMA spreads each 100 bps bit over a 64-chip PN waveform on a 12.8 kHz carrier and detects by correlation.
+
+3. Timing recovery
+All modes use a chirp preamble for coarse packet acquisition. FSK then refines symbol timing by searching the known sync sequence. QPSK matched-filters then searches symbol phase over the known QPSK sync. CDMA aligns by maximizing the known sync correlation.
+
+4. Carrier recovery for QPSK
+The QPSK receiver downconverts by the measured carrier, then uses the known sync symbols to estimate a phase offset and phase ramp. The constellation plot shows the corrected received signal points.
+
+5. Data rate and P_e
+The graded demos send deterministic uncoded PRBS bits. The receiver regenerates the same PRBS from the shared seed and computes P_e directly. The running P_e loop accumulates bit errors over repeated packets.
+
+6. Interference resistance and adaptation
+We scan ambient power in the candidate FSK bands. If a narrowband interferer contaminates a band, we switch to the quieter band or transmit both low and high profiles for diversity. The interference generator lets us demonstrate this with a sine jammer or white noise.
+
+7. Free-for-all extension
+For Monday only, we keep a separate battle FSK branch with redundancy and a GRAND demo. We do not use that for Thursday because Chris disallowed source/channel coding for the graded part.

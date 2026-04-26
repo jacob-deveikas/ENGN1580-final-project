@@ -1,0 +1,7 @@
+{
+  "mode": "fsk",
+  "n_bits": 256,
+  "rate": 50.0,
+  "rx_exit": 0,
+  "tx_exit": 0
+}

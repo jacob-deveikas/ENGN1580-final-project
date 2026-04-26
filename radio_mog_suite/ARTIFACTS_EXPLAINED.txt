@@ -1,0 +1,31 @@
+ARTIFACTS EXPLAINED
+
+Every run folder has a manifest.json with the exact command line and timestamp.
+
+Common artifacts:
+  tx_*.wav                 generated transmitted waveform
+  tx_*_meta.json           transmitter parameters, rate, carrier, profiles
+  tx_waveform.png          transmitter waveform preview
+  tx_spectrum.png          transmitter power spectrum preview
+  rx_*_capture.wav         raw microphone capture used for decoding
+  rx_*_result.json         decoded P_e, bit errors, sync score, carrier/profile used
+
+Measurement artifacts:
+  channel_capture.wav      recording of the sweep at the receiver
+  channel_response.png     magnitude response of speaker-mic channel
+  channel_response.csv     frequency_hz,magnitude_db table
+  channel_response.json    recommended FSK profile and QPSK carrier
+  ambient_capture.wav      raw ambient room-noise capture
+  ambient_noise.png        power by FSK low/high band
+  ambient_choice.json      selected profile from ambient noise scan
+
+QPSK artifacts:
+  qpsk_constellation.png   2D received QPSK signal points after timing/carrier correction
+
+P_e artifacts:
+  pe_loop_summary.json     running bit-error summary over many packets
+
+Monday-only artifacts:
+  grand_summary.json       GRAND simulation summary on synthetic BSC channel
+
+Nothing should overwrite anything because the scripts create timestamped folders under runs/.

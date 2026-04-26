@@ -1,0 +1,23 @@
+{
+  "argv": [
+    "rx_graded.py",
+    "--mode",
+    "fsk",
+    "--rate",
+    "50.0",
+    "--n-bits",
+    "256",
+    "--seed",
+    "1580",
+    "--timeout",
+    "11.58",
+    "--run-dir",
+    "runs/20260426_152159_auto_fsk_50bps_001/rx",
+    "--verbose",
+    "--profiles",
+    "low,high"
+  ],
+  "cwd": "/Users/coralrothenberg/Desktop/1580 Project/radio_mog_suite",
+  "python": "/opt/anaconda3/bin/python",
+  "timestamp": "2026-04-26T15:22:02"
+}

@@ -1,0 +1,30 @@
+{
+  "bit_rate_requested": 50.0,
+  "duration_s": 12.98,
+  "gain": 0.75,
+  "mode": "fsk",
+  "n_bits": 256,
+  "payload_bits": 256,
+  "profile_meta": [
+    {
+      "actual_rate": 50.0,
+      "profile": "low",
+      "samples_per_bit": 882,
+      "tone0": 1900.0,
+      "tone1": 3100.0
+    },
+    {
+      "actual_rate": 50.0,
+      "profile": "high",
+      "samples_per_bit": 882,
+      "tone0": 6600.0,
+      "tone1": 7800.0
+    }
+  ],
+  "profiles": [
+    "low",
+    "high"
+  ],
+  "profiles_spec": "low,high",
+  "seed": 1580
+}
