@@ -1,0 +1,296 @@
+================================================================
+   LAB DAY — TUESDAY APRIL 28 — TWO-PERSON TEST PROTOCOL
+================================================================
+
+Roles:
+  RX  = You (has Claude Code, this laptop)
+  TX  = Your friend (no Claude needed)
+
+Two-person commands are color-marked:
+  >> TX <command>     -> friend runs this on his laptop
+  >> RX <command>     -> you run this on your laptop
+  >> BOTH <command>   -> both run simultaneously
+
+================================================================
+STEP 0 — DO THIS BEFORE LEAVING HOME (~15 min each)
+================================================================
+
+>> BOTH: copy the entire audio_sdr_demo/ directory to their laptop
+   (USB drive, AirDrop, or git clone).
+
+>> BOTH: cd into that directory.
+
+>> BOTH: pip install -r requirements.txt
+
+>> BOTH: ./run_demo.sh self-test
+   ↪ must say "ALL OK" twice. If FAIL, stop, sync up.
+
+>> BOTH: ./run_demo.sh devices
+   ↪ note down two numbers:
+        index of "External Headphones"   -> OUT_DEVICE
+        index of "External Microphone"   -> IN_DEVICE
+   ↪ on most MacBooks both are the same single combo jack
+     (the device shows up twice, once for in once for out).
+
+>> BOTH: macOS lockdown checklist (see top of MEGA_CHEAT_SHEET.txt):
+   - Bluetooth OFF
+   - Do Not Disturb ON
+   - Mic Mode = Standard (NOT Voice Isolation)
+   - Quit Zoom / Teams / FaceTime / Discord / Music
+   - sudo mdutil -a -i off    (Spotlight off)
+   - caffeinate -dimsu &
+   - Plug in power adapter
+   - Sound output volume 60% (NOT max)
+   - Sound input volume MAX
+
+>> BOTH: bring the cable, the Cubilux attenuator, the MillSO TRRS
+   splitter, AND a USB audio interface as backup.
+
+================================================================
+STEP 1 — MEET UP, FIRST 5 MIN: PRBS HASH MATCH
+================================================================
+
+The very first thing you do when you sit down: confirm both laptops
+generate the same PRBS test stream. If hashes differ you waste hours.
+
+>> BOTH: python3 bitstream_check.py --n-bits 512 --seed 1580
+
+   ↪ both terminals must print the SAME first64_bits and bit_hash.
+     If they don't match: NumPy/Python version mismatch or wrong
+     package on one laptop. STOP and resolve before continuing.
+
+================================================================
+STEP 2 — PHASE 1: SINGLE-LAPTOP CABLE LOOPBACK
+        (≈ 30 min, only needs RX's laptop)
+        Goal: prove the audio path works end-to-end on ONE machine.
+================================================================
+
+WIRING (see WIRING_GUIDE_CUBILUX_MILLSO.txt):
+   RX laptop combo jack OUT
+       -> Cubilux 3.5mm attenuator (-30 dB)
+       -> MillSO TRRS splitter (CTIA pinout)
+       -> RX laptop combo jack IN
+   This is the same machine talking to itself.
+   System volume on RX laptop: 50-70% (NOT max).
+
+>> RX: export OUT_DEVICE=<your-out-id>
+>> RX: export IN_DEVICE=<your-in-id>
+
+Test 2a — V5 FSK 50 bps (easiest mode, do this first)
+   >> RX terminal A: ./run_demo.sh rx-fsk 50 high
+       (it will record for ~12 seconds)
+   >> RX terminal B (different shell, started AFTER A is recording):
+       python3 tx_graded.py --mode fsk --rate 50 --n-bits 512 --profiles high --device $OUT_DEVICE
+   Expected output in terminal A:
+       [rx] OK pe=0.000000 errors=0/512 sync=0.95+
+   ↪ If FAIL: paste both terminal outputs to me.
+
+Test 2b — V5 FSK 5000 bps
+   >> RX terminal A: ./run_demo.sh rx-fsk 5000 wide
+   >> RX terminal B: python3 tx_graded.py --mode fsk --rate 5000 --n-bits 512 --profiles wide --device $OUT_DEVICE
+
+Test 2c — V5 QPSK 5000 bps
+   >> RX terminal A: ./run_demo.sh rx-qpsk 5000 4800
+   >> RX terminal B: python3 tx_graded.py --mode qpsk --rate 5000 --n-bits 512 --carrier 4800 --device $OUT_DEVICE
+
+Test 2d — V5 CDMA 100 bps  (12.8 kHz carrier)
+   >> RX terminal A: ./run_demo.sh rx-cdma
+   >> RX terminal B: python3 tx_graded.py --mode cdma --rate 100 --carrier 12800 --n-bits 512 --device $OUT_DEVICE
+
+Test 2e — NEW dashboard, OFDM acoustic, full duplex (TX + RX in same process)
+   >> RX terminal A: ./run_demo.sh dashboard
+   ↪ window opens with all 5 instrumentation panels.
+   ↪ Pe meter should fall toward 1e-4 within ~5 seconds.
+   ↪ Twist the interference slider mid-stream and watch Pe spike then recover.
+   ↪ If Pe is stuck at 0.5: paste the terminal output to me.
+
+CHECKPOINT: All five tests pass at Pe < 0.01? Phase 1 complete.
+            If anything broken, STOP and we fix before Phase 2.
+
+================================================================
+STEP 3 — PHASE 2: TWO-LAPTOP WIRED
+        (≈ 60 min)
+        Goal: the actual demo configuration.
+================================================================
+
+WIRING:
+   TX laptop combo jack OUT
+       -> Cubilux attenuator
+       -> 3.5mm cable
+       -> MillSO splitter
+       -> RX laptop combo jack IN
+   System volume on TX: 50-70% (NOT max).
+   System volume on RX: doesn't matter, it's input.
+
+>> TX: export OUT_DEVICE=<TX-out-id>
+>> RX: export IN_DEVICE=<RX-in-id>
+
+Test 3a — V5 FSK at 50 bps
+   >> RX: ./run_demo.sh rx-fsk 50 high
+       (RX waits, recording)
+   >> TX: python3 tx_graded.py --mode fsk --rate 50 --n-bits 512 --profiles high --device $OUT_DEVICE
+   ↪ start TX within 2 seconds of RX showing "recording...".
+
+Test 3b — V5 FSK 500 bps
+   >> RX: ./run_demo.sh rx-fsk 500 high
+   >> TX: python3 tx_graded.py --mode fsk --rate 500 --n-bits 512 --profiles high --device $OUT_DEVICE
+
+Test 3c — V5 FSK 5000 bps
+   >> RX: ./run_demo.sh rx-fsk 5000 wide
+   >> TX: python3 tx_graded.py --mode fsk --rate 5000 --n-bits 512 --profiles wide --device $OUT_DEVICE
+
+Test 3d — V5 QPSK at 50, 500, 5000 bps  (loop these)
+   >> RX: ./run_demo.sh rx-qpsk 50 4800
+   >> TX: python3 tx_graded.py --mode qpsk --rate 50 --n-bits 512 --carrier 4800 --device $OUT_DEVICE
+   (repeat for 500 and 5000)
+
+Test 3e — V5 CDMA 100 bps
+   >> RX: ./run_demo.sh rx-cdma
+   >> TX: python3 tx_graded.py --mode cdma --rate 100 --carrier 12800 --n-bits 512 --device $OUT_DEVICE
+
+Test 3f — Continuous Pe loop (proves PE is sustained, not a one-shot)
+   >> TX: ./run_demo.sh fsk-sweep wide
+       (this auto-sequences 50, 500, 5000)
+   >> RX: ./run_demo.sh pe-loop-fsk 5000 wide 20
+       (records 20 packets back-to-back, prints running Pe)
+
+Test 3g — NEW: streaming dashboard, FSK
+   >> TX: while true; do
+            python3 tx_graded.py --mode fsk --rate 5000 --n-bits 512 --profiles wide --device $OUT_DEVICE
+            sleep 0.5
+          done
+       (continuous TX, ctrl-C to stop)
+   >> RX: ./run_demo.sh dashboard-fsk 5000
+   ↪ Pe meter should track. Constellation panel shows tone separation.
+
+Test 3h — NEW: streaming OFDM (the headline)
+   >> TX: while true; do
+            python3 -c "
+            import streaming_engine as se, ofdm_phy as op
+            from graded_common import play_audio
+            import numpy as np
+            tx = se.OFDMEngine(cfg=op.acoustic_config())
+            wave = np.concatenate([tx.next_block(4096) for _ in range(60)])
+            play_audio(wave, device=int(__import__('os').environ['OUT_DEVICE']))
+            "
+          done
+       OR (simpler: just run the dashboard on TX too, in TX-only mode)
+       >> TX: python3 dashboard.py --modem ofdm --mode-audio tx_only --out-device $OUT_DEVICE
+   >> RX: ./run_demo.sh dashboard
+   ↪ Within 5 seconds: Pe meter < 0.01, constellations form clean QPSK diamond.
+   ↪ This is rubric item 9 — the wildcard ~12 kbps acoustic uncoded.
+
+Test 3i — NEW: adaptive backchannel
+   First, find each laptop's IP:
+   >> BOTH: ifconfig | grep "inet " | grep -v 127.0.0.1
+       ↪ note down. We'll call them TX_IP and RX_IP.
+
+   >> TX: python3 dashboard.py --modem ofdm --mode-audio tx_only --out-device $OUT_DEVICE --adaptive --backchannel-listen
+   >> RX: python3 dashboard.py --modem ofdm --mode-audio rx_only --in-device $IN_DEVICE --backchannel-tx <TX_IP>
+
+   ↪ Wait 10 seconds. Both dashboards' "backchannel" status bar should
+     update. RX shows "TX→<TX_IP>:9999". TX shows "RX→TX: N pkts".
+   ↪ On the TX dashboard, slide the interference jammer slider to ~4500 Hz
+     amplitude 0.30. Within 1-2 seconds, the bit-loading map at the bottom
+     should mask off ~4 bins. Pe meter dips and recovers.
+   ↪ This is rubric item 10. **Headline demo moment.**
+
+CHECKPOINT: 3a-3h pass at Pe < 0.01? 3i shows bit-loading adaptation?
+            Phase 2 complete.
+
+================================================================
+STEP 4 — PHASE 3: ACOUSTIC TEST  (≈ 30 min)
+        Goal: same tests, but no cable. Speakers->mics across desk.
+================================================================
+
+WIRING:
+   Disconnect the cable.
+   Set TX laptop with built-in speakers facing RX laptop's built-in mic.
+   Distance: ~30-50 cm. Same room, no major obstacles.
+   TX volume: 70-80% (louder than wired because acoustic loss is ~20 dB).
+   Quiet room. Talking is fine; loud music is not.
+
+Repeat: 3a, 3b, 3c, 3d, 3e, 3f, 3h, 3i.
+       (skip 3g — duplicate of 3c).
+
+ACOUSTIC EXPECTATIONS:
+   - 50 / 500 bps FSK / QPSK / CDMA: should pass cleanly.
+   - 5000 bps FSK / QPSK: tighter; may need profile retune.
+   - OFDM: still 12 kbps net at Pe < 1e-3 in a quiet room.
+     If room is loud, expect Pe in the 1e-3 to 1e-2 range.
+
+================================================================
+STEP 5 — WHEN SOMETHING BREAKS, COPY THIS TO ME
+================================================================
+
+If Pe is bad or sync fails, do these three things and paste me the
+results:
+
+1) The exact command, both sides.
+
+2) Last 30 lines of RX terminal:
+       (just copy from your terminal scrollback)
+
+3) The latest run directory contents:
+       ls -la runs/ | tail
+       ↪ tells me the timestamp.
+       cat runs/<timestamp>/rx_*_result.json
+       ↪ paste the full JSON.
+
+4) If the WAV exists and you can share it, run:
+       python3 diagnose_capture.py runs/<timestamp>/rx_*_capture.wav
+       ↪ paste the output.
+
+I will then either:
+   (a) tell you to twist a knob (volume, attenuator, Mic Mode) — fast,
+   (b) push a code fix and tell you to re-run — slower but doable.
+
+================================================================
+STEP 6 — WHEN EVERYTHING WORKS, RECORD GROUND TRUTH NUMBERS
+================================================================
+
+Once each test passes, paste me the results. I'll compile a
+"observed Pe" table per mode that you can show Chris. He'll ask
+for it.
+
+Numbers we want to claim Thursday:
+   FSK 50 bps     wired Pe < 1e-4   acoustic Pe < 1e-3
+   FSK 500 bps    wired Pe < 1e-4   acoustic Pe < 1e-3
+   FSK 5000 bps   wired Pe < 1e-3   acoustic Pe < 1e-2
+   QPSK 50 bps    wired Pe < 1e-4   acoustic Pe < 1e-3
+   QPSK 500 bps   wired Pe < 1e-4   acoustic Pe < 1e-3
+   QPSK 5000 bps  wired Pe < 1e-3   acoustic Pe < 1e-2
+   CDMA 100 bps   wired Pe < 1e-4   acoustic Pe < 1e-3
+   OFDM 12 kbps   wired Pe < 1e-4   acoustic Pe < 1e-3
+   OFDM 25 kbps   wired Pe < 1e-3   (16-QAM adaptive)
+   OFDM 80 kbps   wired Pe < 1e-3   (64-QAM adaptive)
+
+If we BEAT these, even better — we use the actual measured number.
+If we MISS these, we lower the claim to what we measured.
+
+================================================================
+ANTI-PANIC: WHAT IF NOTHING WORKS AT ALL?
+================================================================
+
+If the very first FSK 50 bps test (2a) fails:
+1) Confirm system volume is 50-70%, not max, not muted.
+2) Confirm Mic Mode = Standard.
+3) Confirm both --device flags point to External in/out, not Built-in.
+4) Confirm system Sound preferences show input/output as External.
+5) Run python3 device_doctor.py
+6) Run python3 install_check.py
+7) Paste me everything.
+
+If the dashboard window is blank or crashes:
+1) pip install --upgrade pyqtgraph PyQt6
+2) Try with --mode-audio loopback (no audio HW needed).
+3) Paste me the error trace.
+
+If two-laptop UDP backchannel never connects:
+1) Disable both laptops' firewalls (System Settings → Network → Firewall).
+2) Confirm both on same WiFi network (not eduroam isolation).
+3) Try a USB-C ethernet cable between the two laptops as backup.
+
+================================================================
+END OF LAB DAY PLAN.  SLEEP TONIGHT.  GOOD LUCK TOMORROW.
+================================================================

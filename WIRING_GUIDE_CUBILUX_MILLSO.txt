@@ -1,0 +1,106 @@
+WIRING GUIDE FOR CUBILUX + MILLSO
+=================================
+
+What the cables are for
+-----------------------
+Chris said the demonstrations will be both wired and unwired. These cables are for the wired channel.
+
+Acoustic channel:
+TX laptop speaker -> air/room -> RX laptop microphone
+
+Wired channel:
+TX laptop headphone/line output -> Cubilux attenuator -> RX laptop microphone input
+
+The wired channel bypasses room acoustics and should make 5000 bps much easier.
+It does not require different DSP code. It changes the physical channel.
+
+Parts
+-----
+1. MillSO splitter, blue
+   - One TRRS plug goes into a laptop combo headset jack.
+   - It splits the combo jack into separate headphone output and microphone input jacks.
+
+2. Cubilux attenuator, black
+   - Labeled From Line Out on one end.
+   - Labeled To MIC In on the other end.
+   - It attenuates headphone/line output down to mic input level.
+   - Do not reverse it.
+
+One-way wired setup
+-------------------
+Use this for TX laptop -> RX laptop.
+
+TX laptop combo jack
+  -> TX MillSO splitter
+  -> TX MillSO headphone/output jack
+  -> Cubilux end labeled From Line Out
+  -> Cubilux cable
+  -> Cubilux end labeled To MIC In
+  -> RX MillSO microphone/input jack
+  -> RX laptop combo jack
+
+Only one Cubilux cable is needed for one-way transmission.
+The second Cubilux + second MillSO can be used for reverse direction if needed, but Thursday demos do not require bidirectional audio.
+
+How to verify wiring
+--------------------
+On RX laptop:
+python3 live_monitor.py --ylim 0.05
+
+On TX laptop:
+python3 interference_generator.py --kind sine --freq 3000 --duration 5 --gain 0.02
+
+Expected result:
+The receiver live monitor should show a clean 3000 Hz spike.
+
+If waveform is flat:
+1. Wrong input device selected.
+2. MillSO mic/headphone side reversed.
+3. Mac combo jack is not exposing mic input.
+4. The receiver is listening to the built-in mic instead of wired mic.
+
+List devices:
+python3 live_monitor.py --list-devices
+python3 rx_graded.py --mode fsk --list-devices
+
+Then pass the device number:
+python3 live_monitor.py --device DEVICE_ID --ylim 0.05
+python3 rx_graded.py --mode fsk --rate 500 --n-bits 512 --profiles high --device DEVICE_ID --timeout 8 --verbose
+
+If waveform is clipped or giant:
+1. Lower Mac output volume.
+2. Lower script gain, for example --gain 0.20.
+3. Adjust the Cubilux wheel if your unit has one.
+
+Wired measurement
+-----------------
+Do not reuse acoustic channel_response.json for wired tests.
+Measure the wired channel separately.
+
+RX laptop:
+python3 measure_channel.py --mode rx --duration 2.0
+
+TX laptop immediately after RX starts:
+python3 measure_channel.py --mode tx --duration 2.0 --gain 0.20
+
+Then use the printed recommended FSK profile and QPSK carrier.
+
+Recommended wired tests
+-----------------------
+FSK 500 bps:
+RX: python3 rx_graded.py --mode fsk --rate 500 --n-bits 512 --profiles high --timeout 8 --verbose
+TX: python3 tx_graded.py --mode fsk --rate 500 --n-bits 512 --profiles high --gain 0.30 --preview
+
+FSK 5000 bps:
+RX: python3 rx_graded.py --mode fsk --rate 5000 --n-bits 1024 --profiles wide --timeout 5 --verbose
+TX: python3 tx_graded.py --mode fsk --rate 5000 --n-bits 1024 --profiles wide --gain 0.30 --preview
+
+QPSK 500 bps with measured carrier, example 7200 Hz:
+RX: python3 rx_graded.py --mode qpsk --rate 500 --n-bits 512 --carrier 7200 --timeout 8 --constellation-out qpsk_500_wired.png --verbose
+TX: python3 tx_graded.py --mode qpsk --rate 500 --n-bits 512 --carrier 7200 --gain 0.30 --preview
+
+QPSK 5000 bps with measured carrier:
+RX: python3 rx_graded.py --mode qpsk --rate 5000 --n-bits 1024 --carrier 7200 --timeout 5 --constellation-out qpsk_5000_wired.png --verbose
+TX: python3 tx_graded.py --mode qpsk --rate 5000 --n-bits 1024 --carrier 7200 --gain 0.30 --preview
+
+Use acoustic mode for interference-resistance demos. Use wired mode for clean high-rate / low-Pe demos.

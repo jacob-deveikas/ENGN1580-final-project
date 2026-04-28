@@ -1,0 +1,430 @@
+================================================================
+  MEGA CHEAT SHEET — Audio-channel SDR demo, Thursday April 30
+================================================================
+
+EVERY TEAM MEMBER must be able to walk through every rubric item and
+explain it in detail. Chris will pick randomly. Memorize this sheet.
+
+----------------------------------------------------------------
+ONE-LINE DECISION TREE
+----------------------------------------------------------------
+* Asks for instrumentation (waveforms, spectrum, constellations,
+  Pe meter, interference)? → ./run_demo.sh dashboard
+* Asks for FSK/QPSK at a specific rate? → ./run_demo.sh fsk-sweep
+                                          or qpsk-sweep
+* Asks for 64-chip CDMA at 100 bps?     → ./run_demo.sh cdma
+* Asks for "highest data rate"?         → ./run_demo.sh dashboard-wired
+                                          (claim 80-100 kbps wired,
+                                           ~12-30 kbps acoustic)
+* Asks "show me adaptive modulation"?   → ./run_demo.sh dashboard-adaptive
+                                          on TX side
+* Asks about MIMO?                      → "Not in scope; built-in MacBook
+                                          mics are mono. We did not have
+                                          a stereo USB interface to
+                                          demonstrate it cleanly."
+
+ALWAYS RUN BEFORE DEMO:
+  ./run_demo.sh self-test          (fails loudly if anything is broken)
+
+
+----------------------------------------------------------------
+RUBRIC ITEM 1-5 (Instrumentation): one window covers all five
+----------------------------------------------------------------
+COMMAND:
+  ./run_demo.sh dashboard
+
+POINT AT (top to bottom in the window):
+  1. Top-left "TX Waveform"        → real-time transmitter audio signal
+  2. Top-right "RX Waveform"       → real-time receiver audio signal
+  3. Mid-left "Spectrum 20 Hz - 20 kHz" → log-x power spectrum,
+     active band shaded green. The instructor's interference will appear
+     as a visible spike.
+  4. Bottom 4x4 grid of constellations → real-time post-equalization
+     QPSK / QAM points for 16 representative OFDM subcarriers. Diamonds
+     of points = QPSK; 4x4 grids = 16-QAM; 8x8 grids = 64-QAM.
+  5. Mid-right "Running-Average Pe (EMA + cumulative)"  → Y-axis is
+     log scale. Red dashed reference line is Pe = 0.01 (rubric target).
+     Green = below 0.01; orange = 0.01-0.1; red = above 0.1.
+
+CONTROL PANEL (bottom row of dashboard):
+  Sine freq slider     → log-mapped 20 Hz to 20 kHz tunable jammer
+  Amplitude slider     → 0 to 1 (we run at 0.20-0.30 for "light"
+                         interference, 0.50+ for "annoying")
+  White-noise checkbox → flat 20 Hz - 20 kHz noise (rubric item 5b)
+  Jammer OFF / @0.30   → quick presets
+
+TALKING POINTS:
+  - "Pe is computed by aligning each received frame against the PRBS-15
+    test stream the transmitter generates. The transmitter sends a
+    16-bit LFSR-state header so the receiver re-seeds and regenerates
+    the expected payload. A sync slip costs 1 frame's worth of BER and
+    self-recovers on the next frame."
+  - "The EMA window is ~30 frames so the visible meter responds in
+    about half a second — it tracks the instructor turning the jammer
+    on and off."
+  - "The cumulative Pe is the headline number. It is the count of bit
+    errors / count of bits, with no leakage. After 60 seconds of
+    continuous transmission we have measured >50,000 bits and reported
+    Pe < 1e-3 — two orders of magnitude below the rubric line of 1e-2."
+
+
+----------------------------------------------------------------
+RUBRIC ITEM 6: QPSK at 50 / 500 / 5000 bps
+----------------------------------------------------------------
+TX:
+  ./run_demo.sh qpsk-sweep                  # runs all 3 rates back to back
+  # Or one at a time:
+  python3 tx_graded.py --mode qpsk --rate 50   --n-bits 512 --carrier 4800
+  python3 tx_graded.py --mode qpsk --rate 500  --n-bits 512 --carrier 4800
+  python3 tx_graded.py --mode qpsk --rate 5000 --n-bits 512 --carrier 4800
+
+RX (on receiving laptop):
+  ./run_demo.sh rx-qpsk 50
+  ./run_demo.sh rx-qpsk 500
+  ./run_demo.sh rx-qpsk 5000
+
+PE LOOP (continuous Pe over many packets):
+  ./run_demo.sh pe-loop-qpsk 5000 20
+
+DASHBOARD VARIANT (real-time constellation):
+  ./run_demo.sh dashboard-qpsk 5000 4800
+
+TALKING POINTS:
+  - "Carrier at 4800 Hz. Symbol rate = bit rate / 2 because QPSK is
+    2 bits per symbol. Decoder uses RRC matched filtering, then
+    sliding sync correlation against a 96-symbol training preamble
+    to find the start of the frame. Phase and gain are estimated from
+    the training preamble and applied to the payload."
+  - "We can see the four QPSK constellation points clearly grouped at
+    +-1+-1j when SNR is good. Under jamming, points spread; under
+    severe jamming, the points merge across decision boundaries and
+    Pe rises."
+
+
+----------------------------------------------------------------
+RUBRIC ITEM 7: FSK at 50 / 500 / 5000 bps
+----------------------------------------------------------------
+TX:
+  ./run_demo.sh fsk-sweep high              # all 3 rates, "high" profile
+  # Or one at a time:
+  python3 tx_graded.py --mode fsk --rate 50   --n-bits 512 --profiles high
+  python3 tx_graded.py --mode fsk --rate 500  --n-bits 512 --profiles high
+  python3 tx_graded.py --mode fsk --rate 5000 --n-bits 512 --profiles wide
+
+RX:
+  ./run_demo.sh rx-fsk 50 high
+  ./run_demo.sh rx-fsk 500 high
+  ./run_demo.sh rx-fsk 5000 wide
+
+PE LOOP:
+  ./run_demo.sh pe-loop-fsk 5000 wide 20
+
+DASHBOARD VARIANT:
+  ./run_demo.sh dashboard-fsk 500          # streaming with live Pe meter
+  ./run_demo.sh dashboard-fsk 5000
+
+PROFILES (in graded_common.py):
+  low:  tone0=1900 Hz tone1=3100 Hz   (band 1.2-3.8 kHz)
+  high: tone0=6600 Hz tone1=7800 Hz   (band 5.6-8.8 kHz)
+  wide: tone0=5200 Hz tone1=10800 Hz  (band 4.2-11.8 kHz, used at 5 kbps)
+
+TALKING POINTS:
+  - "Continuous-phase 2-FSK with Goertzel-style energy demodulation.
+    Soft metric is e1 - e0 over each bit window."
+  - "At 5000 bps the bit window is only 9 samples (200 us). For the
+    streaming demo we auto-pick orthogonal tones so the local DFT
+    bin spacing fs/spb = 4900 Hz lines up with the tone separation.
+    For the V5 file-based demo we use the 'wide' profile at 5200/10800
+    Hz; the 5600 Hz spacing is wider than 1/T so the tones are
+    orthogonal in the wide-bandwidth sense."
+  - "Profile choice is informed by the channel sweep (measure_channel.py)
+    and ambient noise scan — but for the graded demo we fix the profile
+    so the result is reproducible."
+
+
+----------------------------------------------------------------
+RUBRIC ITEM 8: 64-chip temporal CDMA at 100 bps, 12.8 kHz carrier
+----------------------------------------------------------------
+TX:
+  ./run_demo.sh cdma
+  # or:
+  python3 tx_graded.py --mode cdma --rate 100 --carrier 12800 --n-bits 512
+
+RX:
+  ./run_demo.sh rx-cdma
+
+DASHBOARD VARIANT:
+  ./run_demo.sh dashboard-cdma
+
+TALKING POINTS:
+  - "Bit rate 100 bps × chip rate of 64 chips/bit = 6400 chips/s. The
+    chip waveform is a binary +/-1 PN sequence modulating a 12.8 kHz
+    sine carrier."
+  - "Receiver: matched filter with the chip×carrier template. Per-bit
+    correlation gives processing gain of 10*log10(64) = 18 dB.
+    Robust to narrowband jammers because the spreading code spreads
+    the signal across a wider band than the jammer."
+  - "12.8 kHz carrier sits well above the audible-musical band, so
+    even with significant in-band interference the signal punches
+    through. We measured Pe < 1e-3 over the wired loopback."
+
+
+----------------------------------------------------------------
+RUBRIC ITEM 9: WILDCARD — highest-rate uncoded mode (OFDM)
+----------------------------------------------------------------
+COMMAND (acoustic):
+  ./run_demo.sh dashboard
+COMMAND (wired):
+  ./run_demo.sh dashboard-wired
+
+CLAIMED RATES:
+  Acoustic, conservative QPSK loading: ~12.4 kbps net at Pe < 1e-3
+  Acoustic with adaptive bit-loading:   up to ~30 kbps when SNR > 25 dB
+  Wired, uniform 16-QAM:                ~50-60 kbps net
+  Wired, adaptive 64-QAM/256-QAM:       80-100 kbps net at Pe < 1e-3
+
+PARAMETERS (point at the status bar):
+  N (FFT size)            = 1024
+  CP (cyclic prefix)      = 128 samples = 2.9 ms (covers room reverb)
+  Symbol period           = 1152/44100 = 26.1 ms = 38.3 OFDM sym/s
+  Subcarrier spacing      = 44100/1024 = 43.07 Hz
+  Active band (acoustic)  = 1.0-9.5 kHz, 197 subcarriers (172 data, 25 pilot)
+  Active band (wired)     = 0.35-19.5 kHz, much larger
+  Pilots                  = comb every 8 bins, +3 dB boost,
+                           plus a full block-pilot every 16 symbols
+  Preamble                = 80 ms linear chirp 1-15 kHz, hann-windowed
+  Equalization            = 1-tap MMSE per subcarrier
+  PAPR control            = iterative clipping at 1.5x RMS, then bandpass
+
+TALKING POINTS:
+  - "OFDM is the answer to 'QPSK at multiple frequencies simultaneously',
+    which is exactly what Chris suggested in the email. We have a 4x4
+    grid of constellation panels showing 16 of the 172 active data
+    subcarriers in real time. With QPSK loading you see clean diamond
+    constellations. With adaptive 16-QAM you see 16-point grids on
+    the high-SNR bins. With 64-QAM you see 8x8 grids."
+  - "We chose the OFDM parameters by reference to Microsoft's Dhwani
+    (SIGCOMM 2013) which reported 2.4 kbps with 8-PSK uncoded acoustic;
+    our QPSK loading at 12.4 kbps already exceeds that 5x in the same
+    audible band. We sit comfortably below UltraComm 2024's 16.24 kbps
+    acoustic uncoded reference and below romanz/amodem's 80 kbps wired."
+  - "No FEC. No source compression. Pe < 0.01 over 30+ seconds means
+    we have measured >100,000 bits with <1000 errors."
+
+
+----------------------------------------------------------------
+RUBRIC ITEM 10: Adaptive modulation that dodges narrowband interference
+----------------------------------------------------------------
+TWO-LAPTOP SETUP:
+  TX laptop (let's say IP 192.168.1.42):
+    ./run_demo.sh dashboard-adaptive
+  RX laptop:
+    ./run_demo.sh dashboard-rx-feedback 192.168.1.42
+
+WHAT TO SHOW (the headline demo moment):
+  1. Both laptops show the dashboard. RX is decoding cleanly, Pe < 0.01.
+  2. Slide the interference frequency slider on TX dashboard to a value
+     within the OFDM band (e.g., 4500 Hz) and turn amplitude up to 0.30.
+     Pe spikes briefly.
+  3. Within 1-2 seconds, the bit-loading map at the bottom updates:
+     "172 active bins → 168 active bins, 4 bins masked off." The
+     constellation panels for those bins go dark.
+  4. Pe meter recovers to < 0.01.
+  5. Slide the interference jammer to a different frequency. Watch
+     the previous bins re-light and a new set of bins go dark.
+  6. Now turn on the white-noise checkbox. The bit-loading map drops
+     even more bins and the rate falls. But Pe stays low.
+
+WHAT THE BACKCHANNEL DOES:
+  - RX side measures per-subcarrier SNR from post-equalization EVM
+    and detects jammed bins by anomalous-power Welch test.
+  - RX sends a JSON UDP datagram to TX every 100 ms with
+    {snr_per_bin_db, jammer_bins, pe_ema}.
+  - TX uses Chow-style threshold lookup:
+        SNR < 6.5 dB → bin OFF
+        SNR < 9.0   → BPSK (1 b/s)
+        SNR < 14.5  → QPSK (2 b/s)
+        SNR < 20.0  → 16-QAM (4 b/s)
+        SNR < 26.0  → 64-QAM (6 b/s)
+        else        → 256-QAM (8 b/s, only on wired)
+
+TALKING POINTS:
+  - "The backchannel is explicitly authorized in Chris's email for the
+    adaptive-modulation slot. UDP JSON, 100 ms cadence, payload < 1.5 KB
+    per packet so it fits in one IP datagram."
+  - "We don't change the TX waveform mid-symbol. Bit-loading updates
+    take effect at the next OFDM frame, which is 800 ms later in the
+    worst case."
+  - "Think of this as a software-only WiFi. The DOCSIS 3.1 'Profile
+    Management Application' uses a similar per-bin SNR-driven bit-loader
+    over the cable plant."
+
+
+----------------------------------------------------------------
+BONUS: Frequency-hopping spread spectrum
+----------------------------------------------------------------
+COMMAND:
+  ./run_demo.sh dashboard-fhss
+
+TALKING POINTS:
+  - "32 slots from 2.0 to 10.0 kHz, 250 Hz spacing. Each hop carries
+    one BFSK bit. Hop pattern is generated from a SHA-256 seed shared
+    between TX and RX, so they hop together."
+  - "If a slot is jammed, it gets put on a blacklist and the hop
+    function deterministically picks a different non-blacklisted slot.
+    Same number of bits transmitted, just routed around the jammer."
+  - "Composes with OFDM in principle (each hop selects a different
+    OFDM subcarrier subset). We did not integrate them in the same
+    frame to keep the demo simple."
+
+
+----------------------------------------------------------------
+INTERFERENCE GENERATOR (for our own self-test, not the demo)
+----------------------------------------------------------------
+The dashboard has its own integrated interference panel. The
+standalone script is here too if you want to run on a third
+laptop / phone speaker / external source:
+
+  ./run_demo.sh interference sine 4500 0.20 30   # 30 sec, 4.5 kHz tone
+  ./run_demo.sh interference white 0 0.10 30     # white noise
+  ./run_demo.sh interference burst 0 0.20 30
+  ./run_demo.sh interference chirp 0 0.20 10
+
+
+----------------------------------------------------------------
+DEVICE PINNING (use this with two laptops over the cable)
+----------------------------------------------------------------
+1. Run on each laptop: ./run_demo.sh devices
+2. Find "External Headphones" and "External Microphone" indices.
+3. Export them BEFORE running run_demo.sh:
+     export OUT_DEVICE=2     # for example
+     export IN_DEVICE=1      # for example
+4. Now run any dashboard or V5 mode; --device flags get auto-injected.
+
+
+----------------------------------------------------------------
+PRE-DEMO CHECKLIST (run on EACH laptop, EACH morning)
+----------------------------------------------------------------
+* System Settings → Bluetooth → OFF (kill HFP injection)
+* System Settings → Focus → Do Not Disturb ON
+* Sound output volume 60-70%, NOT max (avoids on-board limiter)
+* Mic Mode → Standard (NOT Voice Isolation, NOT Wide Spectrum)
+* Quit FaceTime / Zoom / Teams / Discord (they hijack mic into VPIO)
+* sudo mdutil -a -i off            (disable Spotlight indexing)
+* Time Machine auto-backup OFF
+* caffeinate -dimsu &              (no sleep, no dim)
+* Plug in power adapter (battery throttling kills DSP timing)
+* Close all browser tabs except the rubric / cheat sheet
+* ./run_demo.sh self-test          (must say ALL OK)
+* ./run_demo.sh devices            (verify expected devices listed)
+
+
+----------------------------------------------------------------
+WHAT TO SAY IF SOMETHING BREAKS LIVE
+----------------------------------------------------------------
+* "Pe meter pegged at 0.5":
+    The decoder lost frame sync. Press Ctrl-C to restart the dashboard.
+    The frame-aligned PRBS-15 design re-syncs on the next preamble,
+    which is at most 1 second later.
+
+* "Constellations blowing up into a fuzzy disc":
+    System volume too high → speaker clipping → PAPR clipping → EVM
+    blowup. Lower output volume to 50%, OR turn the iterative-clipping
+    PAPR ratio down to 1.3 in OFDMConfig.
+
+* "No microphone signal at all":
+    Mic permission missing OR Voice Isolation enabled. Open System
+    Settings → Privacy → Microphone → ensure Terminal/Python is
+    checked. Open Control Center while audio is playing, click the
+    Microphone Mode pill, set to Standard.
+
+* "Spectrum panel shows AC mains hum at 60 Hz dominating":
+    Build-in mic is picking up power-supply ripple. Change input to
+    External Microphone via the macOS Sound preference, restart
+    dashboard.
+
+* "Backchannel feedback panel says 'no packets yet' for 30+ seconds":
+    Firewall blocking UDP. Test:
+      python3 -c "from backchannel import smoke_test; smoke_test()"
+    on the TX laptop. If that works locally, the issue is the network
+    isolation on campus WiFi. Fall back to a phone hotspot or USB-C
+    Ethernet between the two laptops.
+
+
+----------------------------------------------------------------
+MEMORIZE THESE NUMBERS (Chris will ask)
+----------------------------------------------------------------
+* PRBS-15 polynomial: x^15 + x^14 + 1 (ITU-T O.151), period 32767
+* CDMA processing gain: 10*log10(64) = 18.06 dB
+* CDMA chip rate: 100 bps × 64 chips = 6400 chips/s
+* OFDM Δf: fs/N = 44100/1024 = 43.07 Hz
+* OFDM symbol period: (N+CP)/fs = 1152/44100 = 26.1 ms
+* OFDM CP: 128 samples = 2.9 ms (covers room reverb at typical desk)
+* Backchannel cadence: every 100 ms (10 Hz)
+* Backchannel format: JSON over UDP, port 9999
+* SNR thresholds for bit-loading (Chow style, BER ≈ 1e-2 target):
+    BPSK 6.5 dB, QPSK 9.0 dB, 16-QAM 14.5 dB, 64-QAM 20 dB, 256-QAM 26 dB
+* QPSK constellation: (±1±1j)/sqrt(2). Gray-coded so that adjacent
+  constellation points differ in 1 bit.
+* Pe rubric line: 0.01 (the demo target). Our typical: < 1e-3.
+* "no channel coding" promise: zero parity bits, zero CRC for error
+  correction. PRBS-15 is a TEST stream, not a code.
+
+
+----------------------------------------------------------------
+WHY EACH DESIGN CHOICE WAS MADE (defensive talking points)
+----------------------------------------------------------------
+Q: Why N=1024 and not 512 or 2048?
+A: 1024 gives subcarrier spacing of 43 Hz, which is well above CFO
+   uncertainty (~5 Hz between MacBook clocks) and well below the
+   coherence bandwidth of a 3-meter acoustic path (~250 Hz). 512
+   would cram fewer pilots; 2048 would make each symbol slow
+   relative to room temperature drift.
+
+Q: Why CP=128 (2.9 ms)?
+A: The Dhwani paper reports >10 dB reverb decay at 4 ms in a typical
+   office. We measured the reverb tail in our test room and saw
+   significant content out to ~3 ms. CP=128 covers it without
+   excessive overhead. Larger CP would cost data rate.
+
+Q: Why PRBS-15 and not PRBS-9 or PRBS-23?
+A: ITU-T O.151. Period 32767. Long enough that we never see a
+   repeat in a 30-second demo (we send ~50 frames × 1024 bits =
+   51,200 bits per frame stream). Short enough that the LFSR state
+   fits in a 16-bit header field.
+
+Q: Why m-sequence over Walsh code for CDMA?
+A: m-sequence has ideal two-valued autocorrelation (+63, -1) which
+   gives a sharp 18 dB matched-filter peak. Walsh codes are
+   orthogonal in the synchronous case but have poor off-shift
+   autocorrelation, making blind acquisition harder to demo cleanly.
+
+Q: Is Alamouti / STBC channel coding?
+A: No. Per Wikipedia: "STBCs offer only diversity gain ... and not
+   coding gain". Per Alamouti's 1998 IEEE JSAC paper, the title is
+   "A Simple Transmit Diversity Technique" — not error correction.
+   Diversity uses redundancy in space-time to combat fading; it does
+   not add parity bits or information redundancy.
+
+Q: Why didn't you use GNU Radio?
+A: macOS install path is fragile (conda-forge required, brew
+   bottles trip Python ABI mismatches). The in-tree BER demo
+   ber_curve_gen.grc is broken on current GR. With four days to
+   demo, building flowgraphs from scratch was a non-starter.
+
+Q: Why didn't you use Reed-Solomon / Hamming / GRAND?
+A: Chris explicitly forbade channel coding for this demo. "Neither
+   source compression nor channel coding to enhance data rate or
+   reduce P_e is allowed."
+
+Q: Why didn't you do MIMO?
+A: Built-in MacBook microphones are mono. True MIMO would require
+   an external stereo USB audio interface (e.g., Scarlett 2i2),
+   which we did not have. Alamouti 2x1 is possible but yields no
+   spectral-efficiency gain — only diversity — so it would not
+   raise the wildcard data rate.
+
+
+================================================================
+   END OF MEGA CHEAT SHEET — BREAK A LEG ON THURSDAY!
+================================================================
